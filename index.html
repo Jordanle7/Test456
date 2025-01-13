@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Invaders</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background-color: black;
+    }
+    canvas {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+  <audio id="backgroundMusic" loop autoplay>
+    <source src="space-invaders-classic.mp3" type="audio/mp3">
+  </audio>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const playerImg = new Image();
+    playerImg.src = 'images/spaceship.png';
+
+    const alienImg = new Image();
+    alienImg.src = 'images/alien.png';
+
+    const player = {
+      x: canvas.width / 2 - 25,
+      y: canvas.height - 60,
+      width: 50,
+      height: 50,
+      speed: 10,
+    };
+
+    const bullets = [];
+    const enemies = [];
+
+    const enemyRows = 5;
+    const enemyCols = 10;
+    const enemyWidth = 50;
+    const enemyHeight = 50;
+    const enemySpacing = 15;
+    const enemySpeed = 2;
+
+    let isMovingLeft = false;
+    let isMovingRight = false;
+
+    function createEnemies() {
+      for (let row = 0; row < enemyRows; row++) {
+        for (let col = 0; col < enemyCols; col++) {
+          enemies.push({
+            x: col * (enemyWidth + enemySpacing) + 50,
+            y: row * (enemyHeight + enemySpacing) + 50,
+            width: enemyWidth,
+            height: enemyHeight,
+            alive: true
+          });
+        }
+      }
+    }
+
+    function drawPlayer() {
+      ctx.drawImage(playerImg, player.x, player.y, player.width, player.height);
+    }
+
+    function drawBullets() {
+      ctx.fillStyle = 'yellow';
+      bullets.forEach(bullet => {
+        ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
+      });
+    }
+
+    function drawEnemies() {
+      enemies.forEach(enemy => {
+        if (enemy.alive) {
+          ctx.drawImage(alienImg, enemy.x, enemy.y, enemy.width, enemy.height);
+        }
+      });
+    }
+
+    function updateBullets() {
+      bullets.forEach((bullet, index) => {
+        bullet.y -= bullet.speed;
+        if (bullet.y < 0) bullets.splice(index, 1);
+      });
+    }
+
+    function updateEnemies() {
+      enemies.forEach(enemy => {
+        enemy.x += enemySpeed;
+      });
+
+      const rightEdge = Math.max(...enemies.map(e => e.x + e.width));
+      const leftEdge = Math.min(...enemies.map(e => e.x));
+
+      if (rightEdge >= canvas.width || leftEdge <= 0) {
+        enemies.forEach(enemy => {
+          enemy.y += enemyHeight;
+          enemy.x -= enemySpeed;
+        });
+        enemySpeed *= -1;
+      }
+    }
+
+    function detectCollisions() {
+      bullets.forEach((bullet, bIndex) => {
+        enemies.forEach((enemy, eIndex) => {
+          if (
+            bullet.x < enemy.x + enemy.width &&
+            bullet.x + bullet.width > enemy.x &&
+            bullet.y < enemy.y + enemy.height &&
+            bullet.y + bullet.height > enemy.y &&
+            enemy.alive
+          ) {
+            bullets.splice(bIndex, 1);
+            enemy.alive = false;
+          }
+        });
+      });
+    }
+
+    function gameLoop() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      drawPlayer();
+      drawBullets();
+      drawEnemies();
+
+      updateBullets();
+      updateEnemies();
+      detectCollisions();
+
+      if (isMovingLeft && player.x > 0) player.x -= player.speed;
+      if (isMovingRight && player.x + player.width < canvas.width) player.x += player.speed;
+
+      requestAnimationFrame(gameLoop);
+    }
+
+    window.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft') isMovingLeft = true;
+      if (e.key === 'ArrowRight') isMovingRight = true;
+      if (e.key === ' ') {
+        bullets.push({
+          x: player.x + player.width / 2 - 2.5,
+          y: player.y,
+          width: 5,
+          height: 10,
+          speed: 10,
+        });
+      }
+    });
+
+    window.addEventListener('keyup', e => {
+      if (e.key === 'ArrowLeft') isMovingLeft = false;
+      if (e.key === 'ArrowRight') isMovingRight = false;
+    });
+
+    createEnemies();
+    gameLoop();
+  </script>
+</body>
+</html>
